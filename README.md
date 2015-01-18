@@ -29,6 +29,7 @@ For interacting with the Google Calendar API:
 
 ```
 $ go get golang.org/x/oauth2
+$ go get golang.org/x/oauth2/google
 $ go get google.golang.org/api/calendar/v3
 ```
 

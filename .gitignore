@@ -2,6 +2,7 @@
 cache.json
 calendar-sample.go
 client_secrets.json
+oauth2-test.go
 
 # In case you have set ${GOPATH} = ${GIT_ROOT}
 pkg/
