@@ -62,9 +62,7 @@ func putTokenToFile(f string, token *oauth2.Token) error {
 	return nil
 }
 
-func main() {
-	flag.Parse()
-
+func commandLineExchange() *oauth2.Token {
 	token, err := getTokenFromFile(*cacheFile)
 	if err != nil {
 		if *code == "" {
@@ -85,6 +83,12 @@ func main() {
 		}
 	}
 
+	return token
+}
+
+func main() {
+	flag.Parse()
+	token := commandLineExchange()
 	client := config.Client(oauth2.NoContext, token)
 	fmt.Println(client)
 }
