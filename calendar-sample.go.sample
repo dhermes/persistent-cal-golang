@@ -1,0 +1,90 @@
+// Calendar API Sample.
+package main
+
+import (
+	"flag"
+	"fmt"
+	"log"
+	"net/http"
+	"os"
+
+	"code.google.com/p/goauth2/oauth"
+	"google.golang.org/api/calendar/v3"
+)
+
+const (
+	clientId     = "REPLACE"
+	clientSecret = "REPLACE"
+
+	scope       = calendar.CalendarScope
+	authURL     = "https://accounts.google.com/o/oauth2/auth"
+	tokenURL    = "https://accounts.google.com/o/oauth2/token"
+	redirectURL = "urn:ietf:wg:oauth:2.0:oob"
+)
+
+var (
+	cacheFile = flag.String("cache", "cache.json", "Token cache file")
+	code      = flag.String("code", "", "Authorization Code")
+
+	// Set up a configuration boilerplate.
+	config = &oauth.Config{
+		ClientId:     clientId,
+		ClientSecret: clientSecret,
+		Scope:        scope,
+		AuthURL:      authURL,
+		TokenURL:     tokenURL,
+		TokenCache:   oauth.CacheFile(*cacheFile),
+		RedirectURL:  redirectURL,
+	}
+)
+
+func fatalf(service *calendar.Service, errorMessage string, args ...interface{}) {
+	log.Fatalf("Dying with error:\n"+errorMessage, args...)
+}
+
+func main() {
+	flag.Parse()
+
+	// Set up a transport using the config
+	transport := &oauth.Transport{
+		Config:    config,
+		Transport: http.DefaultTransport,
+	}
+
+	token, err := config.TokenCache.Token()
+	if err != nil {
+		if *code == "" {
+			url := config.AuthCodeURL("")
+			fmt.Println("Visit URL to get a code then run again with -code=YOUR_CODE")
+			fmt.Println(url)
+			os.Exit(1)
+		}
+
+		// Exchange auth code for access token
+		token, err = transport.Exchange(*code)
+		if err != nil {
+			log.Fatal("Exchange: ", err)
+		}
+		fmt.Printf("Token is cached in %v\n", config.TokenCache)
+	}
+	transport.Token = token
+
+	httpClient := transport.Client()
+	calendarService, err := calendar.New(httpClient)
+	eventsService := calendar.NewEventsService(calendarService)
+
+	calendarId := "REPLACE"
+	listCall := eventsService.List(calendarId)
+	listCall.MaxResults(2)
+	res, err := listCall.Do()
+
+	if err == nil {
+		fmt.Println("Events:")
+		for _, item := range res.Items {
+			fmt.Println(item.Id)
+		}
+	} else {
+		fmt.Println("Error occurred.")
+		fmt.Println(err)
+	}
+}

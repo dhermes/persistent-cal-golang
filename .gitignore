@@ -1,0 +1,8 @@
+# Don't upload credentials to git remote.
+cache.json
+calendar-sample.go
+client_secrets.json
+
+# In case you have set ${GOPATH} = ${GIT_ROOT}
+pkg/
+src/

@@ -13,12 +13,23 @@ one shared with coworkers or collaborators).
 See the [about page][4] of the deployed version of this application
 for more information.
 
+### Pre-requisites
+
+Make sure to turn on the Calendar API service in the APIs console.
+
 ### Dependencies
 
 In order to parse ICAL feeds, we use:
 
 ```
-go get github.com/laurent22/ical-go
+$ go get github.com/laurent22/ical-go
+```
+
+For interacting with the Google Calendar API:
+
+```
+$ go get golang.org/x/oauth2
+$ go get google.golang.org/api/calendar/v3
 ```
 
 [1]: https://cloud.google.com/products/app-engine/
