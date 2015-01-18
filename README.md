@@ -11,7 +11,15 @@ periodically added to a user's default Google Calendar (perhaps
 one shared with coworkers or collaborators).
 
 See the [about page][4] of the deployed version of this application
-for more information
+for more information.
+
+### Dependencies
+
+In order to parse ICAL feeds, we use:
+
+```
+go get github.com/laurent22/ical-go
+```
 
 [1]: https://cloud.google.com/products/app-engine/
 [2]: http://en.wikipedia.org/wiki/ICalendar
