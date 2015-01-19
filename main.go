@@ -1,14 +1,31 @@
 package main
 
+// https://cloud.google.com/appengine/docs/go/tools/remoteapi
+import _ "appengine/remote_api"
+
 import (
-	"fmt"
+	"html/template"
 	"net/http"
 )
 
-func init() {
-	http.HandleFunc("/", handler)
+var templateIndex = template.Must(template.ParseFiles(
+	"templates/index.html",
+))
+
+type IndexData struct {
+	Id        string
+	Calendars string
+	Frequency string
 }
 
-func handler(writer http.ResponseWriter, unusedReq *http.Request) {
-	fmt.Fprint(writer, "Hello, world!")
+func init() {
+	http.HandleFunc("/", index)
+}
+
+func index(writer http.ResponseWriter, unusedReq *http.Request) {
+	data := IndexData{Id: "Foo", Calendars: "Bar", Frequency: "Baz"}
+	err := templateIndex.Execute(writer, data)
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+	}
 }
