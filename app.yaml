@@ -3,6 +3,9 @@ version: 0-1
 runtime: go
 api_version: go1.4beta
 
+error_handlers:
+  - file: templates/500.html
+
 handlers:
 # precedence should be noted for any wildcards
 - url: /favicon\.ico
