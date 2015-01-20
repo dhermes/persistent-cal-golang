@@ -56,6 +56,7 @@ func index(writer http.ResponseWriter, request *http.Request) {
 }
 
 func missing(writer http.ResponseWriter, unusedReq *http.Request) {
+	writer.WriteHeader(http.StatusNotFound)
 	err := template404.Execute(writer, nil)
 	if err != nil {
 		http.Error(writer, err.Error(), http.StatusInternalServerError)
