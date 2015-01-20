@@ -24,20 +24,29 @@ type IndexData struct {
 }
 
 func init() {
-	http.HandleFunc("/", index)
+	// Handles "/" or any other route not matched.
+	http.HandleFunc("/", indexOr404)
 }
 
 func index(writer http.ResponseWriter, request *http.Request) {
+	data := IndexData{Id: "Foo", Calendars: "Bar", Frequency: "Baz"}
+	err := templateIndex.Execute(writer, data)
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+	}
+}
+
+func missing(writer http.ResponseWriter, unusedReq *http.Request) {
+	err := template404.Execute(writer, nil)
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+	}
+}
+
+func indexOr404(writer http.ResponseWriter, request *http.Request) {
 	if request.URL.Path == "/" {
-		data := IndexData{Id: "Foo", Calendars: "Bar", Frequency: "Baz"}
-		err := templateIndex.Execute(writer, data)
-		if err != nil {
-			http.Error(writer, err.Error(), http.StatusInternalServerError)
-		}
+		index(writer, request)
 	} else {
-		err := template404.Execute(writer, nil)
-		if err != nil {
-			http.Error(writer, err.Error(), http.StatusInternalServerError)
-		}
+		missing(writer, request)
 	}
 }
