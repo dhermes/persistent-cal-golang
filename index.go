@@ -69,7 +69,7 @@ func getUserCal(c appengine.Context, u *user.User) (*UserCal, error) {
 			Frequency:       `["once a week", "week"]`,
 			CalendarsJSON:   "[]",
 		}
-		_, err = datastore.Put(c, key, &userCal)
+		_, err = datastore.Put(c, key, userCal)
 	} else {
 		c.Infof("User was found: %v", u)
 		// TODO: Implement PropertyLoadSaver interface.
@@ -111,6 +111,7 @@ func index(writer http.ResponseWriter, request *http.Request) {
 	userCal, err := getUserCal(c, u)
 	if err != nil {
 		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	err = renderIndex(writer, userCal)
