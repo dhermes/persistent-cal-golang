@@ -4,8 +4,8 @@ package main
 import _ "appengine/remote_api"
 
 import (
+	"encoding/json"
 	"html/template"
-	"log"
 	"net/http"
 
 	"appengine"
@@ -20,13 +20,23 @@ var (
 	template404 = template.Must(template.ParseFiles(
 		"templates/404.html",
 	))
+	frequencyResponses = map[int]string{
+		1:  `["once a week", "week"]`,
+		4:  `["every two days", "two-day"]`,
+		7:  `["once a day", "day"]`,
+		14: `["twice a day", "half-day"]`,
+		28: `["every six hours", "six-hrs"]`,
+		56: `["every three hours", "three-hrs"]`,
+	}
 )
 
 type UserCal struct {
-	Id        string
-	Email     string
-	Calendars string
-	Frequency string
+	Email           string
+	Calendars       []string
+	UpdateIntervals []int
+	Upcoming        []string
+	Frequency       string `datastore:"-"`
+	CalendarsJSON   string `datastore:"-"`
 }
 
 func init() {
@@ -43,19 +53,42 @@ func loginRedirect(w http.ResponseWriter, c appengine.Context, r *http.Request) 
 	w.WriteHeader(http.StatusFound)
 }
 
-func getUserCal(c appengine.Context, u *user.User) (UserCal, error) {
+func getUserCal(c appengine.Context, u *user.User) (*UserCal, error) {
 	key := datastore.NewKey(c, "UserCal", u.ID, 0, nil)
-	userCal := UserCal{}
+	userCal := &UserCal{}
 	err := datastore.Get(c, key, userCal)
 	if err != nil {
-		log.Print("Nothing found for user: ", u)
-		userCal = UserCal{
-			Id:        u.ID,
-			Email:     u.Email,
-			Calendars: "[]",
-			Frequency: "[]",
+		c.Infof("Nothing found for user: %v", u)
+		c.Infof("Got an error: %v", err)
+		baseInterval := 0 // TODO: Add logic.
+		userCal = &UserCal{
+			Email:           u.Email,
+			Calendars:       []string{},
+			UpdateIntervals: []int{baseInterval},
+			Upcoming:        []string{},
+			Frequency:       `["once a week", "week"]`,
+			CalendarsJSON:   "[]",
 		}
 		_, err = datastore.Put(c, key, &userCal)
+	} else {
+		c.Infof("User was found: %v", u)
+		// TODO: Implement PropertyLoadSaver interface.
+		if userCal.Calendars == nil {
+			userCal.Calendars = []string{}
+		}
+		if userCal.UpdateIntervals == nil {
+			userCal.UpdateIntervals = []int{}
+		}
+		if userCal.Upcoming == nil {
+			userCal.Upcoming = []string{}
+		}
+
+		var b []byte
+		b, err = json.Marshal(userCal.Calendars)
+		userCal.CalendarsJSON = string(b[:])
+		userCal.Frequency = frequencyResponses[len(userCal.UpdateIntervals)]
+		c.Infof("ent.Frequency: %#v, ent.CalendarsJSON: %#v",
+			userCal.Frequency, userCal.CalendarsJSON)
 	}
 
 	return userCal, err
