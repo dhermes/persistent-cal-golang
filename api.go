@@ -6,7 +6,6 @@ import (
 	"net/http"
 
 	"appengine"
-	"appengine/datastore"
 	"appengine/user"
 )
 
@@ -25,64 +24,29 @@ var getInfoResponses = map[int]string{
 	56: "every three hours",
 }
 
-type UserCal struct {
-	Email           string
-	Calendars       []string
-	UpdateIntervals []int
-	Upcoming        []string
-	Frequency       string `datastore:"-"`
-	CalendarsJSON   string `datastore:"-"`
-}
-
-func GetUserCal(c appengine.Context, u *user.User) (*UserCal, error) {
-	key := datastore.NewKey(c, "UserCal", u.ID, 0, nil)
-	userCal := &UserCal{}
-	err := datastore.Get(c, key, userCal)
-
-	if err == nil {
-		// TODO: Implement PropertyLoadSaver interface.
-		if userCal.Calendars == nil {
-			userCal.Calendars = []string{}
-		}
-		if userCal.UpdateIntervals == nil {
-			userCal.UpdateIntervals = []int{}
-		}
-		if userCal.Upcoming == nil {
-			userCal.Upcoming = []string{}
-		}
-
-		return userCal, nil
-	} else {
-		return nil, err
-	}
-}
-
 func init() {
 	http.HandleFunc("/add", addSubscription)
 	http.HandleFunc("/freq", changeFrequency)
 	http.HandleFunc("/getinfo", getInfo)
 }
 
-func notAllowed(writer http.ResponseWriter, request *http.Request) {
-	c := appengine.NewContext(request)
-	c.Infof("%v method not allowed", request.Method)
+func notAllowed(c appengine.Context, writer http.ResponseWriter, method string) {
+	c.Infof("%v method not allowed", method)
 	fmt.Fprint(writer, notAllowed405)
 	writer.WriteHeader(http.StatusMethodNotAllowed)
 }
 
-func currentUser(request *http.Request) *user.User {
-	c := appengine.NewContext(request)
-	return user.Current(c)
-}
-
 func addSubscription(writer http.ResponseWriter, request *http.Request) {
+	c := appengine.NewContext(request)
+
 	// Check for the correct verb.
 	if request.Method != "POST" {
-		notAllowed(writer, request)
+		notAllowed(c, writer, request.Method)
 		return
 	}
+
 	// Check for a signed-in user.
-	u := currentUser(request)
+	u := user.Current(c)
 	if u == nil {
 		fmt.Fprint(writer, `"no_user:fail"`)
 		return
@@ -92,13 +56,16 @@ func addSubscription(writer http.ResponseWriter, request *http.Request) {
 }
 
 func changeFrequency(writer http.ResponseWriter, request *http.Request) {
+	c := appengine.NewContext(request)
+
 	// Check for the correct verb.
 	if request.Method != "PUT" {
-		notAllowed(writer, request)
+		notAllowed(c, writer, request.Method)
 		return
 	}
+
 	// Check for a signed-in user.
-	u := currentUser(request)
+	u := user.Current(c)
 	if u == nil {
 		fmt.Fprint(writer, `"no_user:fail"`)
 		return
@@ -112,12 +79,12 @@ func getInfo(writer http.ResponseWriter, request *http.Request) {
 
 	// Check for the correct verb.
 	if request.Method != "GET" {
-		notAllowed(writer, request)
+		notAllowed(c, writer, request.Method)
 		return
 	}
 
 	// Check for a signed-in user.
-	u := currentUser(request)
+	u := user.Current(c)
 	if u == nil {
 		c.Infof("no_user:fail")
 		fmt.Fprint(writer, `"no_user:fail"`)
