@@ -5,9 +5,11 @@ import _ "appengine/remote_api"
 
 import (
 	"html/template"
+	"log"
 	"net/http"
 
 	"appengine"
+	"appengine/datastore"
 	"appengine/user"
 )
 
@@ -20,8 +22,9 @@ var (
 	))
 )
 
-type indexData struct {
+type UserCal struct {
 	Id        string
+	Email     string
 	Calendars string
 	Frequency string
 }
@@ -40,6 +43,24 @@ func loginRedirect(w http.ResponseWriter, c appengine.Context, r *http.Request) 
 	w.WriteHeader(http.StatusFound)
 }
 
+func getUserCal(c appengine.Context, u *user.User) (UserCal, error) {
+	key := datastore.NewKey(c, "UserCal", u.ID, 0, nil)
+	userCal := UserCal{}
+	err := datastore.Get(c, key, userCal)
+	if err != nil {
+		log.Print("Nothing found for user: ", u)
+		userCal = UserCal{
+			Id:        u.ID,
+			Email:     u.Email,
+			Calendars: "[]",
+			Frequency: "[]",
+		}
+		_, err = datastore.Put(c, key, &userCal)
+	}
+
+	return userCal, err
+}
+
 func index(writer http.ResponseWriter, request *http.Request) {
 	c := appengine.NewContext(request)
 	u := user.Current(c)
@@ -48,8 +69,12 @@ func index(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	data := indexData{Id: u.Email, Calendars: "[]", Frequency: "[]"}
-	err := templateIndex.Execute(writer, data)
+	userCal, err := getUserCal(c, u)
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+	}
+
+	err = templateIndex.Execute(writer, userCal)
 	if err != nil {
 		http.Error(writer, err.Error(), http.StatusInternalServerError)
 	}
