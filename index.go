@@ -82,16 +82,22 @@ func getUserCal(c appengine.Context, u *user.User) (*UserCal, error) {
 		if userCal.Upcoming == nil {
 			userCal.Upcoming = []string{}
 		}
-
-		var b []byte
-		b, err = json.Marshal(userCal.Calendars)
-		userCal.CalendarsJSON = string(b[:])
-		userCal.Frequency = frequencyResponses[len(userCal.UpdateIntervals)]
-		c.Infof("ent.Frequency: %#v, ent.CalendarsJSON: %#v",
-			userCal.Frequency, userCal.CalendarsJSON)
 	}
 
 	return userCal, err
+}
+
+func renderIndex(writer http.ResponseWriter, userCal *UserCal) error {
+	b, err := json.Marshal(userCal.Calendars)
+	if err != nil {
+		return err
+	}
+
+	userCal.CalendarsJSON = string(b[:])
+	userCal.Frequency = frequencyResponses[len(userCal.UpdateIntervals)]
+
+	return templateIndex.Execute(writer, userCal)
+
 }
 
 func index(writer http.ResponseWriter, request *http.Request) {
@@ -107,7 +113,7 @@ func index(writer http.ResponseWriter, request *http.Request) {
 		http.Error(writer, err.Error(), http.StatusInternalServerError)
 	}
 
-	err = templateIndex.Execute(writer, userCal)
+	err = renderIndex(writer, userCal)
 	if err != nil {
 		http.Error(writer, err.Error(), http.StatusInternalServerError)
 	}
