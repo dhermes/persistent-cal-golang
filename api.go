@@ -3,6 +3,9 @@ package main
 import (
 	"fmt"
 	"net/http"
+
+	"appengine"
+	"appengine/user"
 )
 
 var notAllowed405 = `<html>
@@ -23,26 +26,52 @@ func notAllowed(writer http.ResponseWriter) {
 	writer.WriteHeader(http.StatusMethodNotAllowed)
 }
 
+func currentUser(request *http.Request) *user.User {
+	c := appengine.NewContext(request)
+	return user.Current(c)
+}
+
 func addSubscription(writer http.ResponseWriter, request *http.Request) {
+	// Check for the correct verb.
 	if request.Method != "POST" {
 		notAllowed(writer)
 		return
 	}
-	fmt.Fprint(writer, `"no_user:fail"`)
+	// Check for a signed-in user.
+	u := currentUser(request)
+	if u == nil {
+		fmt.Fprint(writer, `"no_user:fail"`)
+	}
+
+	fmt.Fprint(writer, `"limit:fail"`)
 }
 
 func changeFrequency(writer http.ResponseWriter, request *http.Request) {
+	// Check for the correct verb.
 	if request.Method != "PUT" {
 		notAllowed(writer)
 		return
 	}
-	fmt.Fprint(writer, `"no_user:fail"`)
+	// Check for a signed-in user.
+	u := currentUser(request)
+	if u == nil {
+		fmt.Fprint(writer, `"no_user:fail"`)
+	}
+
+	fmt.Fprint(writer, `"no_cal:fail"`)
 }
 
 func getInfo(writer http.ResponseWriter, request *http.Request) {
+	// Check for the correct verb.
 	if request.Method != "GET" {
 		notAllowed(writer)
 		return
 	}
-	fmt.Fprint(writer, `"no_user:fail"`)
+	// Check for a signed-in user.
+	u := currentUser(request)
+	if u == nil {
+		fmt.Fprint(writer, `"no_user:fail"`)
+	}
+
+	fmt.Fprint(writer, `"no_cal:fail"`)
 }
