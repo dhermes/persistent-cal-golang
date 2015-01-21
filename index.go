@@ -30,15 +30,6 @@ var (
 	}
 )
 
-type UserCal struct {
-	Email           string
-	Calendars       []string
-	UpdateIntervals []int
-	Upcoming        []string
-	Frequency       string `datastore:"-"`
-	CalendarsJSON   string `datastore:"-"`
-}
-
 func init() {
 	// Handles "/" or any other route not matched.
 	http.HandleFunc("/", indexOr404)
@@ -54,9 +45,7 @@ func loginRedirect(w http.ResponseWriter, c appengine.Context, r *http.Request) 
 }
 
 func getUserCal(c appengine.Context, u *user.User) (*UserCal, error) {
-	key := datastore.NewKey(c, "UserCal", u.ID, 0, nil)
-	userCal := &UserCal{}
-	err := datastore.Get(c, key, userCal)
+	userCal, err := GetUserCal(c, u)
 	if err != nil {
 		c.Infof("Nothing found for user: %v", u)
 		c.Infof("Got an error: %v", err)
@@ -69,19 +58,10 @@ func getUserCal(c appengine.Context, u *user.User) (*UserCal, error) {
 			Frequency:       `["once a week", "week"]`,
 			CalendarsJSON:   "[]",
 		}
+		key := datastore.NewKey(c, "UserCal", u.ID, 0, nil)
 		_, err = datastore.Put(c, key, userCal)
 	} else {
 		c.Infof("User was found: %v", u)
-		// TODO: Implement PropertyLoadSaver interface.
-		if userCal.Calendars == nil {
-			userCal.Calendars = []string{}
-		}
-		if userCal.UpdateIntervals == nil {
-			userCal.UpdateIntervals = []int{}
-		}
-		if userCal.Upcoming == nil {
-			userCal.Upcoming = []string{}
-		}
 	}
 
 	return userCal, err
