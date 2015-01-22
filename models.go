@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"time"
 
 	"appengine"
 	"appengine/datastore"
@@ -18,10 +19,15 @@ type UserCal struct {
 	CalendarsJSON   string  `datastore:"-"`
 }
 
+func CurrentInterval() int {
+	t := time.Now().UTC()
+	return 8*int(t.Weekday()) + t.Hour()/3 + 1
+}
+
 func (userCal *UserCal) UpdateFrequency(numFreq int) {
 	var baseInterval int
 	if userCal.UpdateIntervals == nil || len(userCal.UpdateIntervals) == 0 {
-		baseInterval = 0 // TODO: Add logic.
+		baseInterval = CurrentInterval()
 	} else {
 		baseInterval = userCal.UpdateIntervals[0]
 	}

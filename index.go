@@ -48,7 +48,7 @@ func getUserCal(c appengine.Context, u *user.User) (*UserCal, error) {
 	if err != nil {
 		c.Infof("Nothing found for user: %v", u)
 		c.Infof("Got an error: %v", err)
-		baseInterval := 0 // TODO: Add logic.
+		baseInterval := CurrentInterval()
 		userCal = &UserCal{
 			Email:           u.Email,
 			Id:              &u.ID,
