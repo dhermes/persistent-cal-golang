@@ -3,16 +3,45 @@
 
 function togglePanel(prefix) {
   var elem = document.getElementById(prefix + "-panel");
-  if (elem.classList) {
-    elem.classList.toggle("show");
+  if (!elem) {
+    console.log('No panel to toggle for prefix:', prefix);
   } else {
-    var classes = elem.className;
-    if (classes.indexOf("show") >= 0) {
-      elem.className = classes.replace("show", "");
+    if (elem.classList) {
+      elem.classList.toggle("show");
     } else {
-      elem.className = classes + " show";
+      var classes = elem.className;
+      if (classes.indexOf("show") >= 0) {
+        elem.className = classes.replace("show", "");
+      } else {
+        elem.className = classes + " show";
+      }
+      console.log(elem.className);
     }
-    console.log(elem.className);
+  }
+}
+
+function showById(idStr) {
+  var elt = document.getElementById(idStr);
+  if (elt) {
+    elt.style.display = "";
+  } else {
+    console.log('Not found:', idStr);
+  }
+}
+
+function hideById(idStr) {
+  var elt = document.getElementById(idStr);
+  if (elt) {
+    elt.style.display = "none";
+  } else {
+    console.log('Not found:', idStr);
+  }
+}
+
+function removeElt(idStr) {
+  var elem = document.getElementById(idStr);
+  if (elem) {
+    elem.remove();
   }
 }
 
@@ -20,17 +49,17 @@ function draw_cal(data) {
   var calendars = JSON.parse(data);
 
   if (calendars.length) {
-    $('#subscriptions-row').show()
+    showById('subscriptions-row');
   }
 
   for (var i = 0; i < calendars.length; i++) {
-    $('#cal-' + i).html(calendars[i]);
+    document.getElementById('cal-' + i).innerHTML = calendars[i];
   }
 
   if (calendars.length > 3) {
-    $('#add-panel').remove()
+    removeElt('add-panel');
   } else {
-    $('#cal-button').show();
+    showById('cal-button');
   }
 }
 
@@ -49,7 +78,7 @@ function reset(data) {
     draw_cal(data);
   }
 
-  $('#calendar-link').val('');
+  document.getElementById('calendar-link').value = '';
   togglePanel('add');
 
   return false;
@@ -69,8 +98,8 @@ function freq_set(data) {
   } else {
     var frequency_verbose = frequency[0],
         frequency_val = frequency[1];
-    $('#freq-val').html(frequency_verbose);
-    $('#frequency').val(frequency_val);
+    document.getElementById('freq-val').innerHTML = frequency_verbose;
+    document.getElementById('frequency').value = frequency_val;
   }
 
   return false;
@@ -85,44 +114,40 @@ function freq_reset(data) {
 
 function removeAlert() {
   togglePanel('alert');
-
-  function removeElt() {
-    $('#alert-panel').remove();
-  }
-  // TODO(dhermes), make the transition to 0 px rather
-  // than to -145px
-  // alert_div.css('left', (-width) + 'px');
-  setTimeout("$('#alert-panel').remove()", 500);
+  // TODO(dhermes): Make the transition to 0 px rather
+  //                than to -145px.
+  setTimeout("removeElt('alert-panel');", 500);
 }
 
 function spawnAlert(text) {
   // first check if one exists, and remove it if it has not been
-  var alert = $('#alert-panel');
-  if (alert.length) {
+  var elem = document.getElementById('alert-panel');
+  if (elem) {
     removeAlert();
   }
 
-  var container = $('#alerts'),
-      alert_div = $(document.createElement('div')),
-      alert_text = $(document.createElement('span')),
-      alert_anchor = $(document.createElement('a'));
-  alert_text.text(text);
-  alert_text.css('position', 'relative');
-  alert_text.css('top', '12px');
-  alert_div.append(alert_text);
-  alert_div.attr('id', 'alert-panel');
-  alert_div.addClass('panel');
+  var alert_text = document.createElement('span');
+  alert_text.style.position = 'relative';
+  alert_text.style.top = '12px';
+  alert_text.textContent = text;
 
-  alert_anchor.attr('href', '#');
-  alert_anchor.attr('onclick', 'removeAlert();');
-  alert_anchor.addClass('controller');
-  alert_anchor.text('X')
-  alert_div.append(alert_anchor);
+  var alert_anchor = document.createElement('a');
+  alert_anchor.href = '#';
+  alert_anchor.setAttribute('onclick', 'removeAlert();');
+  alert_anchor.classList.add('controller');
+  alert_anchor.textContent = 'X';
 
-  container.append(alert_div);
+  var alert_div = document.createElement('div');
+  alert_div.id = 'alert-panel';
+  alert_div.classList.add('panel');
+  alert_div.appendChild(alert_text);
+  alert_div.appendChild(alert_anchor);
+
+  var container = document.getElementById('alerts');
+  container.appendChild(alert_div);
   // max(text_length, 170) since 170 is the standard
-  var width = Math.max(140, alert_text.get(0).offsetWidth) + 30;
-  alert_div.width(width);
+  var width = Math.max(140, alert_text.offsetWidth) + 30;
+  alert_div.style.width = width + 'px';
 
   togglePanel('alert');
 }
@@ -135,13 +160,13 @@ $(window).load(function () {
   freq_set(frequency);
 
   $('#cal-button').click(function () {
-    $('#cal-data').show();
-    $(this).hide();
+    showById('cal-data');
+    hideById('cal-button');
   });
 
   $('#add').submit(function () {
     $.post('/add',
-           {'calendar-link': $('#calendar-link').val()},
+           {'calendar-link': document.getElementById('calendar-link').value},
            reset);
     return false;
   });
@@ -150,7 +175,7 @@ $(window).load(function () {
     $.ajax({
        type: 'PUT',
        url: '/freq',
-       data: {'frequency': $('#frequency').val()},
+       data: {'frequency': document.getElementById('frequency').value},
        success: freq_reset
     });
     return false;
