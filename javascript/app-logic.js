@@ -58,8 +58,6 @@ function draw_cal(data) {
 
   if (calendars.length > 3) {
     removeElt('add-panel');
-  } else {
-    showById('cal-button');
   }
 }
 
@@ -152,26 +150,21 @@ function spawnAlert(text) {
   togglePanel('alert');
 }
 
-$(window).load(function () {
+window.onload = function () {
   var appData = document.getElementById('persistentCalData');
   var calendars = appData.getAttribute('data-calendars');
   var frequency = appData.getAttribute('data-frequency');
   draw_cal(calendars);
   freq_set(frequency);
 
-  $('#cal-button').click(function () {
-    showById('cal-data');
-    hideById('cal-button');
-  });
-
-  $('#add').submit(function () {
+  document.getElementById('add').onsubmit = function() {
     $.post('/add',
            {'calendar-link': document.getElementById('calendar-link').value},
            reset);
     return false;
-  });
+  };
 
-  $('#freq').submit(function () {
+  document.getElementById('freq').onsubmit = function() {
     $.ajax({
        type: 'PUT',
        url: '/freq',
@@ -179,5 +172,5 @@ $(window).load(function () {
        success: freq_reset
     });
     return false;
-  });
-});
+  };
+};
