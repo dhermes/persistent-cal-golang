@@ -128,8 +128,11 @@ function spawnAlert(text) {
 }
 
 $(window).load(function () {
-  draw_cal(persistentCal.calendars);
-  freq_set(persistentCal.frequency);
+  var appData = document.getElementById('persistentCalData');
+  var calendars = appData.getAttribute('data-calendars');
+  var frequency = appData.getAttribute('data-frequency');
+  draw_cal(calendars);
+  freq_set(frequency);
 
   $('#cal-button').click(function () {
     $('#cal-data').show();

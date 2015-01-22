@@ -4,14 +4,10 @@
     <title>Persistent Calendar</title>
     <link type="text/css" rel="stylesheet" href="/stylesheets/main.css" />
     <script src="/javascript/jquery-1.6.2.min.js"></script>
-    <script language="javascript" type="text/javascript">
-    var persistentCal = {}
-    persistentCal.calendars = '{{.CalendarsJSON}}';
-    persistentCal.frequency = '{{.Frequency}}';
-    </script>
     <script src="/javascript/app-logic.js"></script>
   </head>
   <body>
+    <span id="persistentCalData" style="display: none;" data-calendars="{{.CalendarsJSON}}" data-frequency="{{.Frequency}}"></span>
     <table id="status-table">
       <tr>
         <td style="border-right-style:solid; border-right-width:1px;">
