@@ -158,19 +158,36 @@ window.onload = function () {
   freq_set(frequency);
 
   document.getElementById('add').onsubmit = function() {
-    $.post('/add',
-           {'calendar-link': document.getElementById('calendar-link').value},
-           reset);
+    var http = new XMLHttpRequest();
+    http.open('POST', '/add', true);
+    http.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+    http.onreadystatechange = function() {
+      if(http.readyState == 4 && http.status == 200) {
+        reset(http.responseText);
+      }
+    }
+
+    var calLink = document.getElementById('calendar-link').value;
+    var params = 'calendar-link=' + escape(calLink);
+    http.send(params);
+
     return false;
   };
 
   document.getElementById('freq').onsubmit = function() {
-    $.ajax({
-       type: 'PUT',
-       url: '/freq',
-       data: {'frequency': document.getElementById('frequency').value},
-       success: freq_reset
-    });
+    var http = new XMLHttpRequest();
+    http.open('PUT', '/freq', true);
+    http.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+    http.onreadystatechange = function() {
+      if(http.readyState == 4 && http.status == 200) {
+        freq_reset(http.responseText);
+      }
+    }
+
+    var freq = document.getElementById('frequency').value;
+    var params = 'frequency=' + escape(freq);
+    http.send(params);
+
     return false;
   };
 };
