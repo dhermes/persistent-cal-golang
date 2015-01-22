@@ -5,11 +5,15 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"regexp"
 
 	"appengine"
 	"appengine/user"
 )
 
+const patternTripit = `^((http|https|webcal)://|)www.tripit.com/feed/ical/private/[A-Za-z0-9-]+/tripit.ics$`
+
+// Standalone to preserve whitespace in HTML.
 var notAllowed405 = `<html>
   <head>
     <title>405 Method Not Allowed</title>
@@ -33,6 +37,7 @@ var (
 		"two-day":   4,
 		"week":      1,
 	}
+	tripitRegexp = regexp.MustCompile(patternTripit)
 )
 
 func init() {
@@ -77,11 +82,53 @@ func prepareMethod(writer http.ResponseWriter, request *http.Request, desiredMet
 	return c, userCal, nil
 }
 
+func whitelistURI(uri string) (string, error) {
+	submatches := tripitRegexp.FindStringSubmatch(uri)
+	if len(submatches) < 2 {
+		return "", errors.New("URI did not match regular expression")
+	}
+	protocol := submatches[1]
+	return fmt.Sprintf("https://%s", uri[len(protocol):]), nil
+}
+
+func getCalendarLink(request *http.Request) (string, error) {
+	err := request.ParseForm()
+	calendarLinks := request.PostForm["calendar-link"]
+
+	if err != nil {
+		return "", err
+	}
+	if len(calendarLinks) != 1 {
+		return "", errors.New(`"calendar-link" not found uniquely in request`)
+	}
+
+	calendarLink := calendarLinks[0]
+
+	var uri string
+	uri, err = whitelistURI(calendarLink)
+
+	if err != nil {
+		return "", err
+	}
+	return uri, nil
+}
+
 func addSubscription(writer http.ResponseWriter, request *http.Request) {
-	_, _, err := prepareMethod(writer, request, "POST")
+	c, _, err := prepareMethod(writer, request, "POST")
 	if err != nil {
 		return
 	}
+
+	var uri string
+	uri, err = getCalendarLink(request)
+	if err != nil {
+		c.Infof("whitelist:fail")
+		fmt.Fprint(writer, `"whitelist:fail"`)
+		return
+	}
+
+	c.Infof("URI found: %v", uri)
+	c.Infof("limit:fail")
 	fmt.Fprint(writer, `"limit:fail"`)
 }
 
