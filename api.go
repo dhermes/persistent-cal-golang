@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -46,101 +47,95 @@ func notAllowed(c appengine.Context, writer http.ResponseWriter, method string) 
 	writer.WriteHeader(http.StatusMethodNotAllowed)
 }
 
-func addSubscription(writer http.ResponseWriter, request *http.Request) {
+func prepareMethod(writer http.ResponseWriter, request *http.Request, desiredMethod string) (appengine.Context, *UserCal, error) {
 	c := appengine.NewContext(request)
 
 	// Check for the correct verb.
-	if request.Method != "POST" {
+	if request.Method != desiredMethod {
 		notAllowed(c, writer, request.Method)
-		return
+		return c, nil, errors.New("Wrong HTTP method")
 	}
 
 	// Check for a signed-in user.
 	u := user.Current(c)
 	if u == nil {
 		fmt.Fprint(writer, `"no_user:fail"`)
-		return
+		return c, nil, errors.New("No signed-in User")
 	}
 
-	fmt.Fprint(writer, `"limit:fail"`)
-}
-
-func changeFrequency(writer http.ResponseWriter, request *http.Request) {
-	c := appengine.NewContext(request)
-
-	// TODO: Factor these three steps into a helper method.
-	// Check for the correct verb.
-	if request.Method != "PUT" {
-		notAllowed(c, writer, request.Method)
-		return
-	}
-
-	// Check for a signed-in user.
-	u := user.Current(c)
-	if u == nil {
-		fmt.Fprint(writer, `"no_user:fail"`)
-		return
-	}
-
+	// Check that the user actually has a calendar.
 	userCal, err := GetUserCal(c, u)
 	if userCal == nil || err != nil {
 		c.Infof("no_cal:fail")
 		fmt.Fprint(writer, `"no_cal:fail"`)
-		return
+		if err == nil {
+			err = errors.New("No UserCal found")
+		}
+		return c, userCal, err
 	}
 
-	err = request.ParseForm()
-	freqVals := request.PostForm["frequency"]
-	if err != nil || len(freqVals) != 1 {
-		c.Infof("wrong_freq:fail")
-		fmt.Fprint(writer, `"wrong_freq:fail"`)
+	return c, userCal, nil
+}
+
+func addSubscription(writer http.ResponseWriter, request *http.Request) {
+	_, _, err := prepareMethod(writer, request, "POST")
+	if err != nil {
 		return
+	}
+	fmt.Fprint(writer, `"limit:fail"`)
+}
+
+func getFrequency(request *http.Request) (int, error) {
+	err := request.ParseForm()
+	freqVals := request.PostForm["frequency"]
+
+	if err != nil {
+		return 0, err
+	}
+	if len(freqVals) != 1 {
+		return 0, errors.New(`"frequency" not found in request`)
 	}
 
 	numFreq := frequencies[freqVals[0]]
 	if numFreq == 0 {
+		return 0, errors.New(`"frequency" not an accepted interval`)
+	}
+
+	return numFreq, nil
+}
+
+func changeFrequency(writer http.ResponseWriter, request *http.Request) {
+	c, userCal, err := prepareMethod(writer, request, "PUT")
+	if err != nil {
+		return
+	}
+
+	// Get the frequency from the PUT body.
+	var numFreq int
+	numFreq, err = getFrequency(request)
+	if err != nil {
 		c.Infof("wrong_freq:fail")
 		fmt.Fprint(writer, `"wrong_freq:fail"`)
 		return
 	}
 
-	var baseInterval int
-	if len(userCal.UpdateIntervals) == 0 {
-		baseInterval = 0 // TODO: Add logic.
+	// Use valid frequency to update `UpdateIntervals`.
+	userCal.UpdateFrequency(numFreq)
+
+	// Attempt to store the newly updated
+	err = userCal.Put(c)
+	if err == nil {
+		c.Infof("Updating frequency succeeded")
+		fmt.Fprint(writer, FrequencyResponses[len(userCal.UpdateIntervals)])
 	} else {
-		baseInterval = userCal.UpdateIntervals[0]
+		c.Infof("invalid_put:fail")
+		fmt.Fprint(writer, `"invalid_put:fail"`)
 	}
-	updateIntervals := make([]int, numFreq)
-	delta := 56 / numFreq
-	updateIntervals[0] = baseInterval
-	for i := 1; i < numFreq; i++ {
-		updateIntervals[i] = updateIntervals[i-1] + delta
-	}
-	userCal.UpdateIntervals = updateIntervals
-	fmt.Fprint(writer, FrequencyResponses[len(updateIntervals)])
 }
 
 func getInfo(writer http.ResponseWriter, request *http.Request) {
-	c := appengine.NewContext(request)
-
-	// Check for the correct verb.
-	if request.Method != "GET" {
-		notAllowed(c, writer, request.Method)
-		return
-	}
-
-	// Check for a signed-in user.
-	u := user.Current(c)
-	if u == nil {
-		c.Infof("no_user:fail")
-		fmt.Fprint(writer, `"no_user:fail"`)
-		return
-	}
-
-	userCal, err := GetUserCal(c, u)
-	if userCal == nil || err != nil {
-		c.Infof("no_cal:fail")
-		fmt.Fprint(writer, `"no_cal:fail"`)
+	c, userCal, err := prepareMethod(writer, request, "GET")
+	if err != nil {
 		return
 	}
 

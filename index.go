@@ -9,7 +9,6 @@ import (
 	"net/http"
 
 	"appengine"
-	"appengine/datastore"
 	"appengine/user"
 )
 
@@ -52,14 +51,12 @@ func getUserCal(c appengine.Context, u *user.User) (*UserCal, error) {
 		baseInterval := 0 // TODO: Add logic.
 		userCal = &UserCal{
 			Email:           u.Email,
+			Id:              &u.ID,
 			Calendars:       []string{},
 			UpdateIntervals: []int{baseInterval},
 			Upcoming:        []string{},
-			Frequency:       `["once a week", "week"]`,
-			CalendarsJSON:   "[]",
 		}
-		key := datastore.NewKey(c, "UserCal", u.ID, 0, nil)
-		_, err = datastore.Put(c, key, userCal)
+		err = userCal.Put(c)
 	} else {
 		c.Infof("User was found: %v", u)
 	}

@@ -1,6 +1,8 @@
 package main
 
 import (
+	"errors"
+
 	"appengine"
 	"appengine/datastore"
 	"appengine/user"
@@ -11,8 +13,36 @@ type UserCal struct {
 	Calendars       []string
 	UpdateIntervals []int
 	Upcoming        []string
-	Frequency       string `datastore:"-"`
-	CalendarsJSON   string `datastore:"-"`
+	Id              *string `datastore:"-"`
+	Frequency       string  `datastore:"-"`
+	CalendarsJSON   string  `datastore:"-"`
+}
+
+func (userCal *UserCal) UpdateFrequency(numFreq int) {
+	var baseInterval int
+	if userCal.UpdateIntervals == nil || len(userCal.UpdateIntervals) == 0 {
+		baseInterval = 0 // TODO: Add logic.
+	} else {
+		baseInterval = userCal.UpdateIntervals[0]
+	}
+
+	updateIntervals := make([]int, numFreq)
+	delta := 56 / numFreq
+	updateIntervals[0] = baseInterval
+	for i := 1; i < numFreq; i++ {
+		updateIntervals[i] = updateIntervals[i-1] + delta
+	}
+	userCal.UpdateIntervals = updateIntervals
+}
+
+func (userCal *UserCal) Put(c appengine.Context) error {
+	if userCal.Id == nil {
+		return errors.New("No ID set on UserCal")
+	}
+
+	key := datastore.NewKey(c, "UserCal", *userCal.Id, 0, nil)
+	_, err := datastore.Put(c, key, userCal)
+	return err
 }
 
 func GetUserCal(c appengine.Context, u *user.User) (*UserCal, error) {
@@ -31,6 +61,7 @@ func GetUserCal(c appengine.Context, u *user.User) (*UserCal, error) {
 		if userCal.Upcoming == nil {
 			userCal.Upcoming = []string{}
 		}
+		userCal.Id = &u.ID
 
 		return userCal, nil
 	} else {
