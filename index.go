@@ -20,7 +20,7 @@ var (
 	template404 = template.Must(template.ParseFiles(
 		"templates/404.html",
 	))
-	frequencyResponses = map[int]string{
+	FrequencyResponses = map[int]string{
 		1:  `["once a week", "week"]`,
 		4:  `["every two days", "two-day"]`,
 		7:  `["once a day", "day"]`,
@@ -74,7 +74,7 @@ func renderIndex(writer http.ResponseWriter, userCal *UserCal) error {
 	}
 
 	userCal.CalendarsJSON = string(b[:])
-	userCal.Frequency = frequencyResponses[len(userCal.UpdateIntervals)]
+	userCal.Frequency = FrequencyResponses[len(userCal.UpdateIntervals)]
 
 	return templateIndex.Execute(writer, userCal)
 
