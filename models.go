@@ -36,7 +36,7 @@ func (userCal *UserCal) UpdateFrequency(numFreq int) {
 	delta := 56 / numFreq
 	updateIntervals[0] = baseInterval
 	for i := 1; i < numFreq; i++ {
-		updateIntervals[i] = updateIntervals[i-1] + delta
+		updateIntervals[i] = (updateIntervals[i-1] + delta) % 56
 	}
 	userCal.UpdateIntervals = updateIntervals
 }
