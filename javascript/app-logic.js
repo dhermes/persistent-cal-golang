@@ -1,19 +1,24 @@
+/* jshint nocomma: false */
+/* jshint quotmark: true */
+/* jshint enforceall: true */
+/* global console, document, escape, setTimeout, window, XMLHttpRequest */
+
 // H/T to Pete Lepage.
 // petelepage.com/blog/2011/07/showing-hiding-panels-with-html-and-css/
 
 function togglePanel(prefix) {
-  var elem = document.getElementById(prefix + "-panel");
+  var elem = document.getElementById(prefix + '-panel');
   if (!elem) {
     console.log('No panel to toggle for prefix:', prefix);
   } else {
     if (elem.classList) {
-      elem.classList.toggle("show");
+      elem.classList.toggle('show');
     } else {
       var classes = elem.className;
-      if (classes.indexOf("show") >= 0) {
-        elem.className = classes.replace("show", "");
+      if (classes.indexOf('show') >= 0) {
+        elem.className = classes.replace('show', '');
       } else {
-        elem.className = classes + " show";
+        elem.className = classes + ' show';
       }
       console.log(elem.className);
     }
@@ -23,16 +28,7 @@ function togglePanel(prefix) {
 function showById(idStr) {
   var elt = document.getElementById(idStr);
   if (elt) {
-    elt.style.display = "";
-  } else {
-    console.log('Not found:', idStr);
-  }
-}
-
-function hideById(idStr) {
-  var elt = document.getElementById(idStr);
-  if (elt) {
-    elt.style.display = "none";
+    elt.style.display = '';
   } else {
     console.log('Not found:', idStr);
   }
@@ -45,7 +41,7 @@ function removeElt(idStr) {
   }
 }
 
-function draw_cal(data) {
+function drawCal(data) {
   var calendars = JSON.parse(data);
 
   if (calendars.length) {
@@ -62,18 +58,18 @@ function draw_cal(data) {
 }
 
 function reset(data) {
-  var parsed_data = JSON.parse(data);
+  var parsedData = JSON.parse(data);
 
-  if (parsed_data === 'whitelist:fail') {
+  if (parsedData === 'whitelist:fail') {
     spawnAlert('Feed is not on whitelist.');
-  } else if (parsed_data === 'limit:fail') {
+  } else if (parsedData === 'limit:fail') {
     spawnAlert('You have reached the maximum number of feeds.');
-  } else if (parsed_data === 'contained:fail') {
+  } else if (parsedData === 'contained:fail') {
     spawnAlert('You are already subscribed to this calendar feed.');
-  } else if (parsed_data === 'no_user:fail') {
+  } else if (parsedData === 'no_user:fail') {
     spawnAlert('No user was provided.');
   } else {
-    draw_cal(data);
+    drawCal(data);
   }
 
   document.getElementById('calendar-link').value = '';
@@ -82,7 +78,7 @@ function reset(data) {
   return false;
 }
 
-function freq_set(data) {
+function freqSet(data) {
   var frequency = JSON.parse(data);
 
   if (frequency === 'no_cal:fail') {
@@ -94,17 +90,17 @@ function freq_set(data) {
   } else if (frequency === 'method_not_supported:fail') {
     spawnAlert('That method is not supported.');
   } else {
-    var frequency_verbose = frequency[0],
-        frequency_val = frequency[1];
-    document.getElementById('freq-val').innerHTML = frequency_verbose;
-    document.getElementById('frequency').value = frequency_val;
+    var frequencyVerbose = frequency[0];
+    var frequencyVal = frequency[1];
+    document.getElementById('freq-val').innerHTML = frequencyVerbose;
+    document.getElementById('frequency').value = frequencyVal;
   }
 
   return false;
 }
 
-function freq_reset(data) {
-  freq_set(data);
+function freqReset(data) {
+  freqSet(data);
   togglePanel('freq');
 
   return false;
@@ -114,7 +110,7 @@ function removeAlert() {
   togglePanel('alert');
   // TODO(dhermes): Make the transition to 0 px rather
   //                than to -145px.
-  setTimeout("removeElt('alert-panel');", 500);
+  setTimeout(function() { removeElt('alert-panel'); }, 500);
 }
 
 function spawnAlert(text) {
@@ -124,70 +120,63 @@ function spawnAlert(text) {
     removeAlert();
   }
 
-  var alert_text = document.createElement('span');
-  alert_text.style.position = 'relative';
-  alert_text.style.top = '12px';
-  alert_text.textContent = text;
+  var alertText = document.createElement('span');
+  alertText.style.position = 'relative';
+  alertText.style.top = '12px';
+  alertText.textContent = text;
 
-  var alert_anchor = document.createElement('a');
-  alert_anchor.href = '#';
-  alert_anchor.setAttribute('onclick', 'removeAlert();');
-  alert_anchor.classList.add('controller');
-  alert_anchor.textContent = 'X';
+  var alertAnchor = document.createElement('a');
+  alertAnchor.href = '#';
+  alertAnchor.setAttribute('onclick', 'removeAlert();');
+  alertAnchor.classList.add('controller');
+  alertAnchor.textContent = 'X';
 
-  var alert_div = document.createElement('div');
-  alert_div.id = 'alert-panel';
-  alert_div.classList.add('panel');
-  alert_div.appendChild(alert_text);
-  alert_div.appendChild(alert_anchor);
+  var alertDiv = document.createElement('div');
+  alertDiv.id = 'alert-panel';
+  alertDiv.classList.add('panel');
+  alertDiv.appendChild(alertText);
+  alertDiv.appendChild(alertAnchor);
 
   var container = document.getElementById('alerts');
-  container.appendChild(alert_div);
+  container.appendChild(alertDiv);
   // max(text_length, 170) since 170 is the standard
-  var width = Math.max(140, alert_text.offsetWidth) + 30;
-  alert_div.style.width = width + 'px';
+  var width = Math.max(140, alertText.offsetWidth) + 30;
+  alertDiv.style.width = width + 'px';
 
   togglePanel('alert');
 }
 
-window.onload = function () {
+function makeHttp(httpVerb, uriPath, payload, callback) {
+    var http = new XMLHttpRequest();
+    http.open(httpVerb, uriPath, true);
+    http.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+    http.onreadystatechange = function() {
+      if (http.readyState === 4 && http.status === 200) {
+        callback(http.responseText);
+      }
+    };
+
+    http.send(payload);
+}
+
+window.onload = function() {
   var appData = document.getElementById('persistentCalData');
   var calendars = appData.getAttribute('data-calendars');
   var frequency = appData.getAttribute('data-frequency');
-  draw_cal(calendars);
-  freq_set(frequency);
+  drawCal(calendars);
+  freqSet(frequency);
 
   document.getElementById('add').onsubmit = function() {
-    var http = new XMLHttpRequest();
-    http.open('POST', '/add', true);
-    http.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
-    http.onreadystatechange = function() {
-      if(http.readyState == 4 && http.status == 200) {
-        reset(http.responseText);
-      }
-    }
-
     var calLink = document.getElementById('calendar-link').value;
     var params = 'calendar-link=' + escape(calLink);
-    http.send(params);
-
+    makeHttp('POST', '/add', params, reset);
     return false;
   };
 
   document.getElementById('freq').onsubmit = function() {
-    var http = new XMLHttpRequest();
-    http.open('PUT', '/freq', true);
-    http.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
-    http.onreadystatechange = function() {
-      if(http.readyState == 4 && http.status == 200) {
-        freq_reset(http.responseText);
-      }
-    }
-
     var freq = document.getElementById('frequency').value;
     var params = 'frequency=' + escape(freq);
-    http.send(params);
-
+    makeHttp('PUT', '/freq', params, freqReset);
     return false;
   };
 };
