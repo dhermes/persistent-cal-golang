@@ -11,7 +11,10 @@ import (
 	"appengine/user"
 )
 
-const patternTripit = `^((http|https|webcal)://|)www.tripit.com/feed/ical/private/[A-Za-z0-9-]+/tripit.ics$`
+const (
+	maxCalendars  = 4
+	patternTripit = `^((http|https|webcal)://|)www.tripit.com/feed/ical/private/[A-Za-z0-9-]+/tripit.ics$`
+)
 
 // Standalone to preserve whitespace in HTML.
 var notAllowed405 = `<html>
@@ -114,11 +117,19 @@ func getCalendarLink(request *http.Request) (string, error) {
 }
 
 func addSubscription(writer http.ResponseWriter, request *http.Request) {
-	c, _, err := prepareMethod(writer, request, "POST")
+	c, userCal, err := prepareMethod(writer, request, "POST")
 	if err != nil {
 		return
 	}
 
+	// Don't allow adding if already reach max calendars.
+	if len(userCal.Calendars) >= maxCalendars {
+		c.Infof("limit:fail")
+		fmt.Fprint(writer, `"limit:fail"`)
+		return
+	}
+
+	// Make sure the submitted link is valid.
 	var uri string
 	uri, err = getCalendarLink(request)
 	if err != nil {
@@ -126,10 +137,40 @@ func addSubscription(writer http.ResponseWriter, request *http.Request) {
 		fmt.Fprint(writer, `"whitelist:fail"`)
 		return
 	}
-
 	c.Infof("URI found: %v", uri)
-	c.Infof("limit:fail")
-	fmt.Fprint(writer, `"limit:fail"`)
+
+	// Check if already contained.
+	appendNeeded := true
+	for _, calName := range userCal.Calendars {
+		if calName == uri {
+			appendNeeded = false
+			break
+		}
+	}
+
+	if appendNeeded {
+		c.Infof("URI being added")
+		userCal.Calendars = append(userCal.Calendars, uri)
+		err = userCal.Put(c)
+	} else {
+		c.Infof("URI already in calendars")
+	}
+
+	if err != nil {
+		c.Infof("invalid_put:fail")
+		fmt.Fprint(writer, `"invalid_put:fail"`)
+		return
+	}
+
+	var b []byte
+	b, err = json.Marshal(userCal.Calendars)
+
+	if err != nil {
+		c.Infof("encoding_error:fail")
+		fmt.Fprint(writer, `"encoding_error:fail"`)
+	} else {
+		fmt.Fprint(writer, string(b[:]))
+	}
 }
 
 func getFrequency(request *http.Request) (int, error) {
